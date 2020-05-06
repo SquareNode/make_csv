@@ -8,38 +8,52 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Main {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        Path fajl;
-        int num_headers = -1;
-        String filename = new String(), temp = new String();
-        StringBuilder sb = new StringBuilder(), entry = new StringBuilder();
-        Boolean more = true;
-        List<String> line = new ArrayList<>(), headers = new ArrayList<>();
+    
+    public static void writeLine(Path file, List<String> line, StandardOpenOption... op){
+        try {
+            if(op.length == 1)
+                Files.write(file, line, op[0]);
+            else
+                Files.write(file, line);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 
+    public static Path getFilename(Scanner sc){
+        String filename;
         System.out.print("Enter file name: ");
+
+        filename = null;
+
         if(sc.hasNextLine()){
             filename = sc.nextLine();
         }
 
-        fajl = Paths.get(filename + ".csv");
+        return Paths.get(filename + ".csv");
+    }
 
-        System.out.print("Enter num headers: ");
-        if(sc.hasNextInt()){
-            num_headers = sc.nextInt();
-        }
+    public static List<String> getHeaders(Scanner sc, int n, Path file) {
 
-        for (int i = 0; i < num_headers; i++) {
+        List<String> res = new ArrayList<>(), toWrite = new ArrayList<>();
+        String currHeader;
+        StringBuilder sb = new StringBuilder(), entry = new StringBuilder();
+
+        //Variable 'currHeader' might not have been initialized
+        currHeader = null;
+
+        for (int i = 0; i < n; i++) {
             System.out.printf("Enter header %d: ", i+1);
             //stdin flush? sc.hasNextInt triggers sc.hasNextLine ?
             if(i == 0)
                 sc.nextLine();
             if(sc.hasNextLine()) {
-                temp = sc.nextLine();
+                currHeader = sc.nextLine();
             }
             sb.delete(0, sb.length());
-            sb.append(temp);
-            headers.add(temp);
+            sb.append(currHeader);
+            res.add(currHeader);
 
             if(sb.indexOf(" ") != -1){
                 sb.insert(0, "\"");
@@ -47,50 +61,74 @@ public class Main {
             }
 
             entry.append(sb);
-            if(i != num_headers-1)
+            if(i != n-1)
                 entry.append(", ");
         }
 
-        entry.append("\n");
-        line.add(entry.toString());
-        try {
-            Files.write(fajl, line);
-        }
-        catch (Exception e){
-            e.printStackTrace();
+        toWrite.add(entry.toString());
+
+        writeLine(file, toWrite);
+
+        return res;
+    }
+
+    public static void makeEntry(Scanner sc, int n, Path file, List<String> headers) {
+
+        String temp;
+        StringBuilder sb = new StringBuilder(), entry = new StringBuilder();
+        List <String> toWrite = new ArrayList<>();
+
+        //Variable 'temp' might not have been initialized
+        temp = null;
+
+        for (int i = 0; i < n; i++) {
+            System.out.printf("Enter %s: ", headers.get(i));
+            if(sc.hasNextLine()) {
+                temp = sc.nextLine();
+            }
+            sb.delete(0, sb.length());
+            sb.append(temp);
+            if(sb.indexOf(" ") != -1){
+                sb.insert(0, "\"");
+                sb.append("\"");
+            }
+
+            entry.append(sb);
+            if(i != n-1)
+                entry.append(", ");
+
         }
 
+        toWrite.add(entry.toString());
+        writeLine(file, toWrite, StandardOpenOption.APPEND);
+
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        Path file;
+        int num_headers;
+        String temp = new String();
+        Boolean more;
+        List<String> headers;
+
+        file = getFilename(sc);
+
+        //Variable 'num_headers' might not have been initialized
+        num_headers = -1;
+
+        System.out.print("Enter num headers: ");
+        if(sc.hasNextInt()){
+            num_headers = sc.nextInt();
+        }
+
+        headers = getHeaders(sc, num_headers, file);
+
+        more = true;
         while(more) {
+            makeEntry(sc, num_headers, file, headers);
 
-            for (int i = 0; i < num_headers; i++) {
-                System.out.printf("Enter %s: ", headers.get(i));
-                if(sc.hasNextLine()) {
-                    temp = sc.nextLine();
-                }
-                sb.delete(0, sb.length());
-                sb.append(temp);
-                if(sb.indexOf(" ") != -1){
-                    sb.insert(0, "\"");
-                    sb.append("\"");
-                }
-
-                entry.append(sb);
-                if(i != num_headers-1)
-                    entry.append(", ");
-
-            }
-
-            line.clear();
-            entry.append("\n");
-            line.add(entry.toString());
-            try {
-                Files.write(fajl, line);
-            }
-            catch (Exception e){
-                e.printStackTrace();
-            }
-
-            System.out.printf("Make another entry? yes/ye/y");
+            System.out.printf("Make another entry? yes/ye/y ");
             if(sc.hasNext())
                 temp = sc.next();
             if(!(temp.equalsIgnoreCase("yes") || temp.equalsIgnoreCase("ye")
