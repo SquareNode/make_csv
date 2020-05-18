@@ -1,3 +1,5 @@
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,20 +11,39 @@ import java.util.Scanner;
 
 public class Main {
     
-    public static void writeLine(Path file, List<String> line, StandardOpenOption... op){
-        try {
-            if(op.length == 1)
-                Files.write(file, line, op[0]);
-            else
-                Files.write(file, line);
+    public static void writeLine(FileWriter file, List<String> line){
+        int n, curr;
+
+        n = line.size();
+        curr = 0;
+        for(String s:line){
+            if(s.strip().indexOf(" ") != -1) {
+                try {
+                    file.write("\"" + s + "\"" + (curr == n-1 ? "" : ","));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            else{
+                try{
+                    file.write(s + (curr == n-1 ? "" : ","));
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+            }
+            curr++;
         }
-        catch (Exception e){
+
+        try {
+            file.write('\n');
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static Path getFilename(Scanner sc){
+    public static FileWriter getFilename(Scanner sc){
         String filename;
+        FileWriter res;
         System.out.print("Enter file name: ");
 
         filename = null;
@@ -31,14 +52,19 @@ public class Main {
             filename = sc.nextLine();
         }
 
-        return Paths.get(filename + ".csv");
+        res = null;
+        try {
+            res = new FileWriter(filename + ".csv");
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+        return res;
     }
 
-    public static List<String> getHeaders(Scanner sc, int n, Path file) {
+    public static List<String> getHeaders(Scanner sc, int n) {
 
-        List<String> res = new ArrayList<>(), toWrite = new ArrayList<>();
+        List<String> res = new ArrayList<>();
         String currHeader;
-        StringBuilder sb = new StringBuilder(), entry = new StringBuilder();
 
         //Variable 'currHeader' might not have been initialized
         currHeader = null;
@@ -51,28 +77,12 @@ public class Main {
             if(sc.hasNextLine()) {
                 currHeader = sc.nextLine();
             }
-            sb.delete(0, sb.length());
-            sb.append(currHeader);
             res.add(currHeader);
-
-            if(sb.indexOf(" ") != -1){
-                sb.insert(0, "\"");
-                sb.append("\"");
-            }
-
-            entry.append(sb);
-            if(i != n-1)
-                entry.append(", ");
         }
-
-        toWrite.add(entry.toString());
-
-        writeLine(file, toWrite);
-
         return res;
     }
 
-    public static void makeEntry(Scanner sc, int n, Path file, List<String> headers) {
+    public static void makeEntry(Scanner sc, int n, FileWriter file, List<String> headers) {
 
         String temp;
         StringBuilder sb = new StringBuilder(), entry = new StringBuilder();
@@ -86,32 +96,22 @@ public class Main {
             if(sc.hasNextLine()) {
                 temp = sc.nextLine();
             }
-            sb.delete(0, sb.length());
-            sb.append(temp);
-            if(sb.indexOf(" ") != -1){
-                sb.insert(0, "\"");
-                sb.append("\"");
-            }
-
-            entry.append(sb);
-            if(i != n-1)
-                entry.append(", ");
-
+            toWrite.add(temp);
         }
 
-        toWrite.add(entry.toString());
-        writeLine(file, toWrite, StandardOpenOption.APPEND);
+        writeLine(file, toWrite);
 
     }
 
     public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        Path file;
+        Scanner sc;
+        FileWriter file;
         int num_headers;
-        String temp = new String();
+        String temp;
         Boolean more;
         List<String> headers;
 
+        sc =  new Scanner(System.in);
         file = getFilename(sc);
 
         //Variable 'num_headers' might not have been initialized
@@ -122,9 +122,11 @@ public class Main {
             num_headers = sc.nextInt();
         }
 
-        headers = getHeaders(sc, num_headers, file);
+        headers = getHeaders(sc, num_headers);
+        writeLine(file, headers);
 
         more = true;
+        temp = null;
         while(more) {
             makeEntry(sc, num_headers, file, headers);
 
@@ -137,6 +139,12 @@ public class Main {
 
             //flush?
             sc.nextLine();
+        }
+
+        try {
+            file.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
     }
